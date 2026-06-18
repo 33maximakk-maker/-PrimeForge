@@ -1,0 +1,158 @@
+#!/usr/bin/env python3
+"""
+prime_generator.py - Генератор простых чисел на Python
+Поддерживает: решето Эратосфена, перебор, диапазоны, статистику, экспорт.
+"""
+import sys
+import time
+import math
+
+def sieve_of_eratosthenes(n):
+    """Решето Эратосфена для чисел до n включительно."""
+    if n < 2:
+        return []
+    is_prime = [True] * (n + 1)
+    is_prime[0] = is_prime[1] = False
+    for i in range(2, int(n ** 0.5) + 1):
+        if is_prime[i]:
+            for j in range(i * i, n + 1, i):
+                is_prime[j] = False
+    return [i for i, prime in enumerate(is_prime) if prime]
+
+def trial_division(n):
+    """Проверка числа на простоту перебором делителей до sqrt(n)."""
+    if n < 2:
+        return False
+    if n == 2:
+        return True
+    if n % 2 == 0:
+        return False
+    i = 3
+    while i * i <= n:
+        if n % i == 0:
+            return False
+        i += 2
+    return True
+
+def primes_in_range(a, b, method='sieve'):
+    """Генерация простых чисел в диапазоне [a, b] включительно."""
+    if a < 2:
+        a = 2
+    if a > b:
+        return []
+    if method == 'sieve':
+        primes = sieve_of_eratosthenes(b)
+        return [p for p in primes if p >= a]
+    else:
+        return [p for p in range(a, b + 1) if trial_division(p)]
+
+def stats(primes):
+    if not primes:
+        return (0, 0, 0, 0, 0)
+    return {
+        'count': len(primes),
+        'sum': sum(primes),
+        'avg': sum(primes) / len(primes),
+        'min': min(primes),
+        'max': max(primes)
+    }
+
+def export_to_file(filename, primes):
+    with open(filename, 'w', encoding='utf-8') as f:
+        f.write('\n'.join(str(p) for p in primes))
+
+def interactive():
+    print("🔢 Генератор простых чисел (интерактивный)")
+    while True:
+        print("\nВыберите действие:")
+        print("1. Сгенерировать простые числа до N")
+        print("2. Сгенерировать простые числа в диапазоне [A, B]")
+        print("3. Проверить число на простоту")
+        print("4. Выход")
+        choice = input("Ваш выбор: ").strip()
+        if choice == '4':
+            break
+        elif choice == '1':
+            try:
+                n = int(input("Введите N: "))
+                start = time.time()
+                primes = sieve_of_eratosthenes(n)
+                elapsed = time.time() - start
+                st = stats(primes)
+                print(f"Простых чисел: {st['count']}, Сумма: {st['sum']}, Среднее: {st['avg']:.2f}, Время: {elapsed:.4f} сек.")
+                show = input("Показать список? (y/n): ").strip().lower()
+                if show == 'y':
+                    print(primes)
+                exp = input("Экспортировать в файл? (y/n): ").strip().lower()
+                if exp == 'y':
+                    fname = input("Имя файла: ").strip() or "primes.txt"
+                    export_to_file(fname, primes)
+                    print(f"Сохранено в {fname}")
+            except ValueError:
+                print("Введите корректное число.")
+        elif choice == '2':
+            try:
+                a = int(input("Введите A: "))
+                b = int(input("Введите B: "))
+                method = input("Метод (sieve/trial): ").strip().lower() or 'sieve'
+                if method not in ('sieve', 'trial'):
+                    method = 'sieve'
+                start = time.time()
+                primes = primes_in_range(a, b, method)
+                elapsed = time.time() - start
+                st = stats(primes)
+                print(f"Простых чисел: {st['count']}, Сумма: {st['sum']}, Среднее: {st['avg']:.2f}, Время: {elapsed:.4f} сек.")
+                show = input("Показать список? (y/n): ").strip().lower()
+                if show == 'y':
+                    print(primes)
+                exp = input("Экспортировать в файл? (y/n): ").strip().lower()
+                if exp == 'y':
+                    fname = input("Имя файла: ").strip() or "primes.txt"
+                    export_to_file(fname, primes)
+                    print(f"Сохранено в {fname}")
+            except ValueError:
+                print("Введите корректные числа.")
+        elif choice == '3':
+            try:
+                num = int(input("Введите число: "))
+                is_prime = trial_division(num)
+                print(f"{num} {'является' if is_prime else 'не является'} простым.")
+            except ValueError:
+                print("Введите корректное число.")
+        else:
+            print("Неверный выбор.")
+
+def main():
+    if len(sys.argv) > 1:
+        # CLI режим с аргументами
+        import argparse
+        parser = argparse.ArgumentParser(description="Генератор простых чисел")
+        parser.add_argument("--max", type=int, help="Верхняя граница (до N)")
+        parser.add_argument("--min", type=int, default=2, help="Нижняя граница")
+        parser.add_argument("--method", choices=['sieve', 'trial'], default='sieve', help="Алгоритм")
+        parser.add_argument("--export", help="Экспортировать в файл")
+        parser.add_argument("--stats", action="store_true", help="Показать статистику")
+        args = parser.parse_args()
+        if args.max:
+            start = time.time()
+            if args.method == 'sieve':
+                primes = sieve_of_eratosthenes(args.max)
+            else:
+                primes = primes_in_range(args.min, args.max, 'trial')
+            elapsed = time.time() - start
+            if args.stats:
+                st = stats(primes)
+                print(f"Количество: {st['count']}, Сумма: {st['sum']}, Среднее: {st['avg']:.2f}, Мин: {st['min']}, Макс: {st['max']}")
+                print(f"Время: {elapsed:.4f} сек.")
+            else:
+                print(primes)
+            if args.export:
+                export_to_file(args.export, primes)
+                print(f"Экспортировано в {args.export}")
+        else:
+            parser.print_help()
+    else:
+        interactive()
+
+if __name__ == "__main__":
+    main()
